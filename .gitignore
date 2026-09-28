@@ -1,0 +1,12 @@
+# Redis runtime data
+data/
+*.rdb
+*.aof
+appendonlydir/
+
+# Secrets
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db

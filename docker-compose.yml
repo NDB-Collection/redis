@@ -1,0 +1,31 @@
+services:
+  redis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: my-redis:latest
+    container_name: my-redis
+    restart: on-failure:3
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - ./data:/data
+
+    # NO password — simplest for dev
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+    networks:
+      - micro_net
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  micro_net:
+    external: true
+    name: micro_net
