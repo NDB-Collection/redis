@@ -3,6 +3,9 @@
 # ==========================================================
 FROM redis:alpine
 
+# Pull in Alpine security fixes newer than the base image (openssl, util-linux, zlib)
+RUN apk upgrade --no-cache
+
 # Copy custom configuration
 COPY redis.conf /usr/local/etc/redis/redis.conf
 
