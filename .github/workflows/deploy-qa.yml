@@ -1,0 +1,44 @@
+name: Deploy QA
+
+# Merging into qa deploys this repo's service to the QA server (https://ndb.xgensell.com:8100).
+# The server pulls qa, rebuilds and restarts only this service, and fails the run if it isn't healthy.
+# The SSH key can only trigger that deploy (forced command on the server); it can't open a shell.
+on:
+  push:
+    branches: [qa]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-qa-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to QA server
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Deploy
+        env:
+          SSH_KEY: ${{ secrets.QA_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ vars.QA_DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ vars.QA_DEPLOY_HOST }}
+          PORT: ${{ vars.QA_DEPLOY_PORT }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/qa_deploy
+          chmod 600 ~/.ssh/qa_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/qa_deploy -p "$PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "ndb-deploy@$HOST" "$REPO"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/qa_deploy
