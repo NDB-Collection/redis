@@ -1,7 +1,9 @@
 # ==========================================================
 # Standalone Redis — based on official Alpine image
+# Pinned to a specific Redis + Alpine release (NC-3909) so every
+# build starts from the same base; bump the tag deliberately.
 # ==========================================================
-FROM redis:alpine
+FROM redis:8.10.3-alpine3.23
 
 # Pull in Alpine security fixes newer than the base image (openssl, util-linux, zlib)
 RUN apk upgrade --no-cache
