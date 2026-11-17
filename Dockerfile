@@ -24,7 +24,7 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
   CMD redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD" --no-auth-warning} ping | grep -q PONG || exit 1
 
 # NC-3919: memory limit and eviction policy per environment from env (defaults = redis.conf values). Keep
-# REDIS_MAXMEMORY below the container memory limit.
-ENV REDIS_MAXMEMORY=1536mb REDIS_MAXMEMORY_POLICY=allkeys-lru
+# REDIS_MAXMEMORY below the container memory limit. NC-3920: the policy defaults to noeviction (see redis.conf).
+ENV REDIS_MAXMEMORY=1536mb REDIS_MAXMEMORY_POLICY=noeviction
 
 CMD ["sh", "-c", "exec redis-server /usr/local/etc/redis/redis.conf --maxmemory \"$REDIS_MAXMEMORY\" --maxmemory-policy \"$REDIS_MAXMEMORY_POLICY\" ${REDIS_PASSWORD:+--requirepass \"$REDIS_PASSWORD\"}"]
