@@ -23,4 +23,8 @@ EXPOSE 6379
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
   CMD redis-cli ${REDIS_PASSWORD:+-a "$REDIS_PASSWORD" --no-auth-warning} ping | grep -q PONG || exit 1
 
-CMD ["sh", "-c", "exec redis-server /usr/local/etc/redis/redis.conf ${REDIS_PASSWORD:+--requirepass \"$REDIS_PASSWORD\"}"]
+# NC-3919: memory limit and eviction policy per environment from env (defaults = redis.conf values). Keep
+# REDIS_MAXMEMORY below the container memory limit.
+ENV REDIS_MAXMEMORY=1536mb REDIS_MAXMEMORY_POLICY=allkeys-lru
+
+CMD ["sh", "-c", "exec redis-server /usr/local/etc/redis/redis.conf --maxmemory \"$REDIS_MAXMEMORY\" --maxmemory-policy \"$REDIS_MAXMEMORY_POLICY\" ${REDIS_PASSWORD:+--requirepass \"$REDIS_PASSWORD\"}"]
