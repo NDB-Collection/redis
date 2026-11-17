@@ -1,0 +1,68 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+
+jobs:
+  trivy-scan:
+    name: Run Trivy Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Trivy (pinned)
+        env:
+          TRIVY_VERSION: 0.75.0
+          TRIVY_DEB_SHA256: b6d7b944b6cbf4e7de5b4bc6c3635900c50fed53b64b77b99a5fbc3136cd1d5d
+        run: |
+          wget -q "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb" -O trivy.deb
+          echo "${TRIVY_DEB_SHA256}  trivy.deb" | sha256sum -c -
+          sudo dpkg -i trivy.deb
+          rm trivy.deb
+          trivy --version
+
+      # --------------------------------------------------------
+      # Docker image scan — OS packages, binaries, layers
+      # (no application lock files in this repo, so no fs scan)
+      # --------------------------------------------------------
+      - name: Build Docker image
+        run: |
+          docker build -t redis:${{ github.sha }} .
+
+      - name: Scan Docker image (table)
+        run: |
+          trivy image \
+            --exit-code 0 \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --format table \
+            --output cms-stack-redis.trivy-image.txt \
+            redis:${{ github.sha }}
+
+      - name: Generate image JSON report
+        if: always()
+        run: |
+          trivy image \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --format json \
+            --output cms-stack-redis.trivy-image.json \
+            redis:${{ github.sha }}
+
+      # --------------------------------------------------------
+      # Upload reports as artifact evidence
+      # --------------------------------------------------------
+      - name: Upload scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results-${{ github.sha }}
+          path: |
+            cms-stack-redis.trivy-image.txt
+            cms-stack-redis.trivy-image.json
+          retention-days: 90
