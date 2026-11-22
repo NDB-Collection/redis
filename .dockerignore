@@ -1,0 +1,12 @@
+# NC-3941: the image needs only Dockerfile and redis.conf; keep runtime data, git, env and docs out of the build context
+.git
+.github/
+data/
+**/*.rdb
+**/*.aof
+appendonlydir/
+.env*
+docker-compose*
+Docs/
+.claude/
+README.md
