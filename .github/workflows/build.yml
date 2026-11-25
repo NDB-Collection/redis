@@ -1,0 +1,49 @@
+name: Build
+
+# CI on pull requests and pushes to dev/main: the image is built but not pushed.
+# Dispatch manually to build and push :latest to ECR repository xgen-ndb-redis.
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      aws-region:
+        description: AWS region
+        required: false
+        type: string
+        default: ap-southeast-2
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify:
+    name: Docker build (no push)
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/git/checkout@main
+
+      - name: Build image
+        run: docker build -t redis:${{ github.sha }} .
+
+  build:
+    name: Build & push :latest
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/git/checkout@main
+
+      - name: Build & push image
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/aws/ecr-push@main
+        with:
+          aws-role-arn: ${{ secrets.CICD_AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.aws-region }}
+          ecr-repository: xgen-ndb-redis
+          dockerfile: Dockerfile
+          build-context: .

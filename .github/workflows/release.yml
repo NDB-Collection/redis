@@ -1,0 +1,62 @@
+name: Release
+
+# Cut a version: build and push the image tagged <version> and latest to
+# xgen-ndb-redis, then tag the repository and create a GitHub Release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, e.g. 1.2.3 (git tag + ECR image tag)
+        required: true
+        type: string
+      aws-region:
+        description: AWS region
+        required: false
+        type: string
+        default: ap-southeast-2
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Build & push ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/git/checkout@main
+
+      - name: Build & push versioned image
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/aws/ecr-push@main
+        with:
+          aws-role-arn: ${{ secrets.CICD_AWS_ROLE_ARN }}
+          aws-region: ${{ inputs.aws-region }}
+          ecr-repository: xgen-ndb-redis
+          dockerfile: Dockerfile
+          build-context: .
+          tags: |
+            ${{ inputs.version }}
+            latest
+
+  tag:
+    name: Tag & GitHub Release
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/git/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Tag the release
+        uses: NDB-Collection/xgen-git-workflows/.github/actions/git/tag-push@main
+        with:
+          tag: ${{ inputs.version }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.version }}
+        run: gh release create "$TAG" --title "$TAG" --generate-notes
