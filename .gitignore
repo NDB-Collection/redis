@@ -5,8 +5,11 @@ data/
 appendonlydir/
 
 # Secrets
-.env
+.env*
 
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# NC-3941: local compose overrides stay out of git (docker-compose.yml is the documented standalone run file)
+docker-compose.override.yml
